@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Open Chat Client</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #FFF5F5; margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .chat-container { width: 100%; max-width: 600px; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); display: flex; flex-direction: column; height: 80vh; overflow: hidden; border: 1px solid #FEE2E2; }
+        .header { background: #FF5E5E; color: white; padding: 15px 20px; font-size: 1.2rem; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+        .status { font-size: 0.8rem; background: rgba(255,255,255,0.2); padding: 4px 8px; border-radius: 20px; }
+        .messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .message { max-width: 75%; padding: 10px 14px; border-radius: 8px; font-size: 0.95rem; line-height: 1.4; }
+        .message.received { background: #F3F4F6; align-self: flex-start; color: #1F2937; }
+        .message.sent { background: #FFE4E6; align-self: flex-end; color: #9F1239; }
+        .input-area { padding: 15px; border-top: 1px solid #F3F4F6; display: flex; gap: 10px; }
+        input { flex: 1; padding: 12px; border: 1px solid #E5E7EB; border-radius: 6px; font-size: 1rem; outline: none; }
+        input:focus { border-color: #FF5E5E; }
+        button { background: #FF5E5E; color: white; border: none; padding: 0 20px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1rem; }
+        button:hover { background: #E14D4D; }
+    </style>
+</head>
+<body>
+
+<div class="chat-container">
+    <div class="header">
+        <span># lobby</span>
+        <span class="status" id="status-text">Connecting...</span>
+    </div>
+    <div class="messages" id="message-box"></div>
+    <div class="input-area">
+        <input type="text" id="msg-input" placeholder="Message #lobby..." autocomplete="off">
+        <button id="send-btn">Send</button>
+    </div>
+</div>
+
+<script>
+    // Your live Railway backend WebSocket connection
+    const socketUrl = "wss://chat-open-production.up.railway.app/chat";
+    let ws;
+
+    function connect() {
+        ws = new WebSocket(socketUrl);
+
+        ws.onopen = () => {
+            document.getElementById('status-text').innerText = "Online";
+            document.getElementById('status-text').style.background = "#10B981";
+        };
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            displayMessage(data.text, 'received');
+        };
+
+        ws.onclose = () => {
+            document.getElementById('status-text').innerText = "Offline";
+            document.getElementById('status-text').style.background = "#EF4444";
+            setTimeout(connect, 3000); // Auto-reconnect
+        };
+    }
+
+    function displayMessage(text, type) {
+        const box = document.getElementById('message-box');
+        const el = document.createElement('div');
+        el.className = `message ${type}`;
+        el.innerText = text;
+        box.appendChild(el);
+        box.scrollTop = box.scrollHeight;
+    }
+
+    document.getElementById('send-btn').onclick = sendMessage;
+    document.getElementById('msg-input').onkeypress = (e) => { if(e.key === 'Enter') sendMessage(); };
+
+    function sendMessage() {
+        const input = document.getElementById('msg-input');
+        if(!input.value.trim() || ws.readyState !== WebSocket.OPEN) return;
+        
+        const payload = { text: input.value };
+        ws.send(JSON.stringify(payload));
+        displayMessage(input.value, 'sent');
+        input.value = '';
+    }
+
+    connect();
+</script>
+</body>
+</html>
