@@ -35,3 +35,8 @@ wss.on('connection', ws => {
   ws.on('close', () => clients.delete(ws));
 });
 server.listen(PORT, () => console.log(`Open Chat backend listening on ${PORT}`));
+// Serve the chat interface webpage at the root web address
+const path = require('path');
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
